@@ -1,4 +1,4 @@
-#Puffin: A Tool for Topological Data Analysis over Binary Data#
+**Puffin: A Tool for Topological Data Analysis over Binary Data**
 
 This is a tool designed as part of a final project for MATH.625.687 Applied Topology at Johns Hopkins University.
 
