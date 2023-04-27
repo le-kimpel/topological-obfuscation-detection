@@ -94,8 +94,8 @@ if __name__ == "__main__":
     blob = angr.Project(filename, load_options={'auto_load_libs':False})
     cfg = blob.analyses.CFGEmulated(keep_state=True)
 
-    # now get the k most central nodes as our distance metric
-    l = filter_cfg(cfg,4)    
+    # now get all nodes within distance k
+    l = filter_cfg(cfg,2)    
     A = build_simplex(l)
     Cp = [check_faces(cfg, A[0], A[indx], indx+1) for indx in range(0,len(A))]
 
