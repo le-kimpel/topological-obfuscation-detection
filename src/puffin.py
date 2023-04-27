@@ -8,20 +8,29 @@ from operator import itemgetter
 
 '''
 Main code for supporting topological binary analysis.
+TODO make sure we can add larger and larger faces! Indirection isn't just with 3-node cycles!
 '''
 def ordered_powerset(iterable):
     s = list(iterable)
     return chain.from_iterable(permutations(s, r) for r in range(len(s)+1))
-def filter_cfg(cfg, k, metric="centrality"):
+def filter_cfg(cfg, k, metric="distance"):
     '''
     Filtration of binary data using a distance metric over the adjacency matrix of a CFG.
     '''
     # compute G
-    G = cfg.graph
+    G = cfg.graph.to_undirected()
     l = []
-    central = []
+    path = dict(nx.all_pairs_shortest_path_length(G, cutoff=k))
     
-    # for each node n in G, compute the top k central nodes, and return them in a list.
+    # for each node n in G, compute the nodes with max. eccentricity k and return
+    for node in G.nodes:
+        for i in path:
+            try: 
+                l.append(path[i][node])
+                break
+            except KeyError:
+                continue
+    '''
     V = nx.degree_centrality(G)
     for item in V:
         n = V[item]
@@ -34,8 +43,8 @@ def filter_cfg(cfg, k, metric="centrality"):
             break
         count += 1
         l.append(item[1])        
-        
-    return l
+    '''
+    return list(set(l))
 
 def check_faces(cfg, d1, simplices, dimension):
     '''
