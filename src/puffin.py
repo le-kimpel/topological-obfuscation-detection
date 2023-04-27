@@ -13,6 +13,7 @@ TODO make sure we can add larger and larger faces! Indirection isn't just with 3
 def ordered_powerset(iterable):
     s = list(iterable)
     return chain.from_iterable(permutations(s, r) for r in range(len(s)+1))
+
 def filter_cfg(cfg, k, metric="distance"):
     '''
     Filtration of binary data using a distance metric over the adjacency matrix of a CFG.
@@ -50,7 +51,7 @@ def check_faces(cfg, d1, simplices, dimension):
     '''
     Ensure that an edge exists in the o.g. graph if it's in the set of simplices
     '''
-    G = cfg.graph
+    G = cfg.graph.to_undirected()
     M = []
     if (dimension < 2):
         return simplices
@@ -61,8 +62,10 @@ def check_faces(cfg, d1, simplices, dimension):
         return M
     elif (dimension == 3):
         for s in simplices:
-            if list(s) in list(nx.simple_cycles(G)):
-                M.append(s)
+            if G.has_edge(s[0], s[1]) and s[0] in d1 and s[1] in d1:
+                if G.has_edge(s[1], s[2]) and s[2] in d1:
+                    if (G.has_edge(s[2], s[0])):
+                        M.append(s)
         return M
 def build_simplex(l):
     '''
