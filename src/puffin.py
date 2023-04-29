@@ -14,9 +14,8 @@ from operator import itemgetter
 Main code for supporting topological binary analysis.
 TODO: 
 
-1. Write out test data to dataframe
-2. Write classifier  
-3. Replace test data with actual data
+1. Replace test data with actual data
+2. Polish off the computation of the path complexes
 '''
 def ordered_powerset(iterable):
     s = list(iterable)
@@ -138,10 +137,10 @@ if __name__ == "__main__":
         for i in range(1,18):
             print("DISTANCE = " + str(i))
             is_obf.append(obf)
-            l = filter_cfg(cfg,i, undirected=False)    
+            l = filter_cfg(cfg,i, undirected=True)    
             A = build_simplex(l)
             distances.append(i)
-            Cp = [check_faces(cfg, A[0], A[indx], indx+1, undirected=False) for indx in range(0,len(A))]
+            Cp = [check_faces(cfg, A[0], A[indx], indx+1, undirected=True) for indx in range(0,len(A))]
             #N = graph_from_simplex(Cp[1])
             #nx.draw(N)
             #plt.show()
@@ -183,11 +182,63 @@ if __name__ == "__main__":
     df = pd.DataFrame({'H0': H0_hlist, 'H1': H1_hlist, 'H2': H2_hlist, 'iota': iota, 'obf' : is_obf })
     print(df)
 
-    df_train, df_test = model_selection.train_test_split(df, test_size=0.3)
-    X = df_train.drop("obf", axis=1).values
-    y = df_train["obf"]
+    #df_train, df_test = model_selection.train_test_split(df, test_size=0.3)
+    X = df.drop("obf", axis=1).values
+    y = df["obf"]
     model = ensemble.RandomForestClassifier(n_estimators=100, criterion="entropy", random_state=0)
     model.fit(X,y)
+
+    '''
+    Now compute the homologies of another binary...see what it thinks.
+    Not insanely optimistic at the moment lol
+    '''
+    
+    blob = angr.Project('../binaries/bin/obfuscated/testobf', load_options={'auto_load_libs':False})
+    cfg = blob.analyses.CFGEmulated(keep_state=True)
+
+    H0_hlist = []
+    H1_hlist = []
+    H2_hlist = []
+    is_obf = []
+    iota = []
+    
+    # now get all nodes within distance k
+    distances = []
+        
+    for i in range(1,18):
+        print("DISTANCE = " + str(i))
+        
+        l = filter_cfg(cfg,i, undirected=True)    
+        A = build_simplex(l)
+        distances.append(i)
+        Cp = [check_faces(cfg, A[0], A[indx], indx+1, undirected=True) for indx in range(0,len(A))]
+        #N = graph_from_simplex(Cp[1])
+        #nx.draw(N)
+        #plt.show()
+        
+        # build the complex
+        SC = SimplicialComplex(Cp)
+        H0 = SC.compute_homologies(1)
+        H1 = SC.compute_homologies(2)
+        H2 = SC.compute_homologies(3)
+    
+        H0_hlist.append(SC.compute_homology_rank(1))
+        H1_hlist.append(SC.compute_homology_rank(2))
+        H2_hlist.append(SC.compute_homology_rank(3))
+
+        iota.append(SC.compute_cyclomatic_complexity())
+        print("--------------- S T A T S ---------------") 
+        print("Dimension of SC: " + str(SC.dimension))
+        print("Rank H0: " + str(SC.compute_homology_rank(1)))
+        print("Rank H1: " + str(SC.compute_homology_rank(2)))
+        print("Rank H2: " + str(SC.compute_homology_rank(3)))
+        print("Cyclomatic Complexity: " + str(SC.compute_cyclomatic_complexity()))
+        print("--------------- S T A T S ---------------")
             
+       
+    # write these out to a dataframe
+    df = pd.DataFrame({'H0': H0_hlist, 'H1': H1_hlist, 'H2': H2_hlist, 'iota': iota})
+    pred = model.predict(df)
+    print(pred)
 
     
