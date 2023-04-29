@@ -1,40 +1,23 @@
 import angr
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn import ensemble
+from sklearn.datasets import make_classification
+from sklearn import model_selection
 import networkx as nx
 from simplicial_complex import SimplicialComplex
 from itertools import chain, combinations, permutations
+import pandas as pd
 from operator import itemgetter
 
 '''
 Main code for supporting topological binary analysis.
 TODO: 
 
-1. Output data to file
+1. Write out test data to dataframe
 2. Write classifier  
+3. Replace test data with actual data
 '''
-
-def write_results_to_txt():
-    '''
-    Get resulting CFG homology data and print it to a .txt file.
-    Format:
-
-    B1   H0   H1  H2   Obf 
-    B2                 1
-    ...                0
-    BN                 0
-
-    And we want to estimate, given some binary Bk, whether Obf = 0 or Obf = 1, given 
-    its CFG path homologies. 
-    '''
-    return 
-
-def classifier():
-    '''
-    Attempt to build a classifier for obfuscated binary data
-    '''
-    return 
-
 def ordered_powerset(iterable):
     s = list(iterable)
     return chain.from_iterable(permutations(s, r) for r in range(len(s)+1))
@@ -133,55 +116,78 @@ def graph_from_simplex(l):
 
 if __name__ == "__main__":
 
+    filename_list = ['../binaries/bin/obfuscated/helloobf', '../binaries/bin/orig/hello']
     # first, build the angr CFG 
-    filename = '../binaries/bin/obfuscated/helloobf'
-    blob = angr.Project(filename, load_options={'auto_load_libs':False})
-    cfg = blob.analyses.CFGEmulated(keep_state=True)
-
-    nx.draw(cfg.graph.to_undirected())
-    plt.show()
-
-    # now get all nodes within distance k
-
-    distances = []
+    obf = 1
     H0_hlist = []
     H1_hlist = []
     H2_hlist = []
-    for i in range(1,19):
-        print("DISTANCE = " + str(i))
-        l = filter_cfg(cfg,i, undirected=False)    
-        A = build_simplex(l)
-        distances.append(i)
-        Cp = [check_faces(cfg, A[0], A[indx], indx+1, undirected=False) for indx in range(0,len(A))]
-        #N = graph_from_simplex(Cp[1])
-        #nx.draw(N)
-        #plt.show()
-    
-        # build the complex
-        SC = SimplicialComplex(Cp)
-        H0 = SC.compute_homologies(1)
-        H1 = SC.compute_homologies(2)
-        H2 = SC.compute_homologies(3)
+    is_obf = []
+    iota = []
+    for filename in filename_list:
         
-        H0_hlist.append(SC.compute_homology_rank(1))
-        H1_hlist.append(SC.compute_homology_rank(2))
-        H2_hlist.append(SC.compute_homology_rank(3))
+        blob = angr.Project(filename, load_options={'auto_load_libs':False})
+        cfg = blob.analyses.CFGEmulated(keep_state=True)
+
+        nx.draw(cfg.graph.to_undirected())
+        plt.show()
+
+        # now get all nodes within distance k
+        distances = []
+        
+        for i in range(1,18):
+            print("DISTANCE = " + str(i))
+            is_obf.append(obf)
+            l = filter_cfg(cfg,i, undirected=False)    
+            A = build_simplex(l)
+            distances.append(i)
+            Cp = [check_faces(cfg, A[0], A[indx], indx+1, undirected=False) for indx in range(0,len(A))]
+            #N = graph_from_simplex(Cp[1])
+            #nx.draw(N)
+            #plt.show()
     
-        print("--------------- S T A T S ---------------") 
-        print("Dimension of SC: " + str(SC.dimension))
-        print("Rank H0: " + str(SC.compute_homology_rank(1)))
-        print("Rank H1: " + str(SC.compute_homology_rank(2)))
-        print("Rank H2: " + str(SC.compute_homology_rank(3)))
-        print("Cyclomatic Complexity: " + str(SC.compute_cyclomatic_complexity()))
-        print("--------------- S T A T S ---------------")
+            # build the complex
+            SC = SimplicialComplex(Cp)
+            H0 = SC.compute_homologies(1)
+            H1 = SC.compute_homologies(2)
+            H2 = SC.compute_homologies(3)
+        
+            H0_hlist.append(SC.compute_homology_rank(1))
+            H1_hlist.append(SC.compute_homology_rank(2))
+            H2_hlist.append(SC.compute_homology_rank(3))
 
-    # try graphing the persistent homologies!
-    plt.scatter(distances, H0_hlist, color='r')
-    plt.scatter(distances, H1_hlist, color='g')
-    plt.scatter(distances, H2_hlist,  color='k')
-    plt.xlabel('Path Distance')
-    plt.ylabel('Ranks of H_0, H_1, and H_2')
-    labels = ['H_0', 'H_1', 'H_2']
-    plt.legend(labels)
-    plt.show()
+            iota.append(SC.compute_cyclomatic_complexity())
+            print("--------------- S T A T S ---------------") 
+            print("Dimension of SC: " + str(SC.dimension))
+            print("Rank H0: " + str(SC.compute_homology_rank(1)))
+            print("Rank H1: " + str(SC.compute_homology_rank(2)))
+            print("Rank H2: " + str(SC.compute_homology_rank(3)))
+            print("Cyclomatic Complexity: " + str(SC.compute_cyclomatic_complexity()))
+            print("--------------- S T A T S ---------------")
 
+        obf = 0
+        # try graphing the persistent homologies!
+
+        '''
+        plt.scatter(distances, H0_hlist, color='r')
+        plt.scatter(distances, H1_hlist, color='g')
+        plt.scatter(distances, H2_hlist,  color='k')
+        plt.xlabel('Path Distance')
+        plt.ylabel('Ranks of H_0, H_1, and H_2')
+        labels = ['H_0', 'H_1', 'H_2']
+        plt.legend(labels)
+        plt.show()
+        '''
+       
+    # write these out to a dataframe
+    df = pd.DataFrame({'H0': H0_hlist, 'H1': H1_hlist, 'H2': H2_hlist, 'iota': iota, 'obf' : is_obf })
+    print(df)
+
+    df_train, df_test = model_selection.train_test_split(df, test_size=0.3)
+    X = df_train.drop("obf", axis=1).values
+    y = df_train["obf"]
+    model = ensemble.RandomForestClassifier(n_estimators=100, criterion="entropy", random_state=0)
+    model.fit(X,y)
+            
+
+    
