@@ -8,8 +8,33 @@ from operator import itemgetter
 
 '''
 Main code for supporting topological binary analysis.
-TODO get more complex data/binaries. 
+TODO: 
+
+1. Output data to file
+2. Write classifier  
 '''
+
+def write_results_to_txt():
+    '''
+    Get resulting CFG homology data and print it to a .txt file.
+    Format:
+
+    B1   H0   H1  H2   Obf 
+    B2                 1
+    ...                0
+    BN                 0
+
+    And we want to estimate, given some binary Bk, whether Obf = 0 or Obf = 1, given 
+    its CFG path homologies. 
+    '''
+    return 
+
+def classifier():
+    '''
+    Attempt to build a classifier for obfuscated binary data
+    '''
+    return 
+
 def ordered_powerset(iterable):
     s = list(iterable)
     return chain.from_iterable(permutations(s, r) for r in range(len(s)+1))
