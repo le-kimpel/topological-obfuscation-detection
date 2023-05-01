@@ -17,6 +17,13 @@ TODO:
 1. Replace test data with actual data
 2. Polish off the computation of the path complexes
 '''
+def is_subset(t1, t2):
+    return set(t1).issubset(t2)
+def get_intersection(A, B):
+    '''
+    Gets the intersection of tuples
+    '''
+    return tuple(set(A) & set(B))
 def ordered_powerset(iterable):
     s = list(iterable)
     return chain.from_iterable(permutations(s, r) for r in range(len(s)+1))
@@ -53,7 +60,7 @@ def filter_cfg_new(cfg, k):
         # sort the distances and paths by longest first
         d1.sort(key = itemgetter(1), reverse=True)
         d2.sort(key = itemgetter(1), reverse=True)
-
+        
         if (d1 == [] and d2 == []):
             l.append([])
         elif (d1 == [] and d2 != []):
@@ -91,55 +98,94 @@ def filter_cfg(cfg, k, metric="distance"):
     
     return l
 '''
-def check_faces(cfg, d1, simplices, dimension, undirected=True):
-    '''
-    Ensure that an edge exists in the o.g. graph if it's in the set of simplices
-    '''
-    G = cfg.graph
-    M = []
-    if (dimension < 2):
-        return simplices
-    if (dimension == 2):
-        for s in simplices:
-            if G.has_edge(s[0],s[1]):
-                M.append(s)
-    elif (dimension == 3):
-        for s in simplices:
-            if G.has_edge(s[0], s[1]):
-                if G.has_edge(s[1], s[2]):
-                    M.append(s)
-    return M
-def build_simplex(paths):
+
+
+def check_faces(simplex):
+    
+    for face in range(1, len(simplex)-1):
+        to_remove_face = []
+        to_remove_next_face = []
+        next_face = face + 1
+        prev_face = face - 1
+        for n in range(0, len(simplex[face])):
+            for m in range(0, len(simplex[next_face])):
+                subset = get_intersection(simplex[face][n], simplex[next_face][m])
+                if subset != ():
+                    if prev_face == 0:
+                        subset = [subset[0]]
+                    if subset not in simplex[prev_face]:
+                        to_remove_face.append(simplex[face][n])
+                        to_remove_next_face.append(simplex[next_face][m])
+
+        for i in to_remove_face:
+            if i in simplex[face]:
+                simplex[face].remove(i)
+        for j in to_remove_next_face:
+            if j in simplex[next_face]:
+                simplex[next_face].remove(j)
+                    
+    return simplex
+
+
+def build_simplex(paths, cfg):
     '''
     Returns 1, 2, and 3-simplices from the filtered CFG data.
     '''
-    # 1-simplices
+
+    G = cfg.graph
+    
+    # 0-simplices
     E = []
     for path in paths:
         for v in path:
             E.append(v)
 
     E = list(set(E))
-    d1 = []
+    d0 = []
     for vertex in E:
-        d1.append([vertex])
+        d0.append([vertex])
     
+    # 1-simplices
+    d1 = []
+    for path in paths:
+        for i in range(0, len(path)-1):
+            if (len(path) >= 2):
+                j = i+1
+                if (G.has_edge(path[i], path[j])):
+                    t = (path[i], path[j])
+                    if t in ordered_powerset(path):
+                        d1.append(t)
+                        
+    d1 = [t for t in (set(tuple(i) for i in d1))]
+ 
     # 2-simplices
     d2 = []
     for path in paths:
-        for i in range(0, len(path)-1):
-            j = i+1
-            t = (path[i], path[j])
-            d2.append(t)
+        if (len(path) >= 3):
+            for i in range(0, len(path)-2):
+                j = i+1
+                k = j+1
+                if (G.has_edge(path[i], path[j])) and (G.has_edge(path[j], path[k])):
+                    t = (path[i], path[j], path[k])
+                    if t in ordered_powerset(path):
+                        d2.append(t)
+                    
+    d2 = [t for t in (set(tuple(i) for i in d2))]
+
+    # 3-simplices
     d3 = []
     for path in paths:
-        for i in range(0, len(path)-2):
-            j = i+1
-            k = j+1
-            t = (path[i], path[j], path[k])
-            d3.append(t)
-
-    return [d1,list(set(d2)),list(set(d3))]
+        if (len(path) >= 4):
+            for i in range(0, len(path)-3):
+                j = i + 1
+                k = j + 1
+                l = k + 1
+                if (G.has_edge(path[i], path[j])) and (G.has_edge(path[j], path[k])) and (G.has_edge(path[k], path[l])):
+                    t = (path[i], path[j], path[k], path[l])
+                    if t in ordered_powerset(path):
+                        d3.append(t)
+    d3 = [t for t in (set(tuple(i) for i in d3))]
+    return [d0, d1, d2, []]
 
 # build a networkx graph from the 2d edges in a simplex.
 def graph_from_simplex(l):
@@ -149,51 +195,85 @@ def graph_from_simplex(l):
     return G
 
 if __name__ == "__main__":
+    '''
+    Ci = [[0],[1],[2],[3],[4],[5],[6],[7],[8], [(0,1), (0,2), (0,3), (0,4), (0,5), (0,6), (0,7), (0,8), (1,2), (3,4), (3,5), (4,5), (6,7), (6,8), (7,8)], [(0,1,2), (0,3,4), (0,3,5), (0,4,5), (0,6,7), (0,6,8), (3,4,5), (6,7,8)]]
+    A = SimplicialComplex(Ci)
 
+    rankH0 = A.compute_homology_rank(1)
+    rankH1 = A.compute_homology_rank(2)
+    rankH2 = A.compute_homology_rank(3)
+    print("Rank H0: " + str(rankH0))
+    print("Rank H1: " + str(rankH1))
+    print("Rank H2: " + str(rankH2))
+    print(A.compute_euler_characteristic())
+    
+    # A debugger simplicial complex
+    Ci = [[[1],[2],[3]], [(1,2),(1,3), (2,3)], [(1,2,3)]]
+    A = SimplicialComplex(Ci)
+        
+    
+    H0 = A.compute_homologies(1)
+    H1 = A.compute_homologies(2)
+    H2 = A.compute_homologies(3)
+    
+    rankH0 = A.compute_homology_rank(1)
+    rankH1 = A.compute_homology_rank(2)
+    rankH2 = A.compute_homology_rank(3)
+    print("Rank H0: " + str(rankH0))
+    print("Rank H1: " + str(rankH1))
+    print("Rank H2: " + str(rankH2))
+    print(A.compute_euler_characteristic())
+    
+'''
     filename_list = ['../binaries/bin/obfuscated/helloobf', '../binaries/bin/orig/hello', '../binaries/bin/obfuscated/t1obf', '../binaries/bin/orig/t1', '../binaries/bin/obfuscated/t3obf', '../binaries/bin/orig/t3', '../binaries/bin/obfuscated/t4obf', '../binaries/bin/orig/t4', '../binaries/bin/obfuscated/t5obf', '../binaries/bin/orig/t5']
     # first, build the angr CFG 
-    obf = 1
     H0_hlist = []
     H1_hlist = []
     H2_hlist = []
+    H3_hlist = []
+    
     is_obf = []
     iota = []
     for filename in filename_list:
         
         blob = angr.Project(filename, load_options={'auto_load_libs':False})
         cfg = blob.analyses.CFGEmulated(keep_state=True)
-
-        #nx.draw(cfg.graph)
-        #plt.show()
-
+        if (filename[:-3] == "obf"):
+            obf = 1
+        else:
+            obf = 0
         # now get all nodes within distance k
         distances = []
         H0 = []
         H1 = []
         H2 = []
+        H3 = []
         
-        for i in range(1,6):
+        for i in range(1, 20):
             print("DISTANCE = " + str(i))
             is_obf.append(obf)
-            #l = filter_cfg(cfg,i)
-            l =filter_cfg_new(cfg, i)
-            A = build_simplex(l)
+            paths = filter_cfg_new(cfg, i)
+            Cp = build_simplex(paths, cfg)
+            Cp = check_faces(Cp)
+           
             distances.append(i)
-            Cp = [check_faces(cfg, A[0], A[indx], indx+1) for indx in range(0,len(A))]
+
             #N = graph_from_simplex(Cp[1])
             #nx.draw(N)
             #plt.show()
     
             # build the complex
             SC = SimplicialComplex(Cp)
-            
+
             H0_hlist.append(SC.compute_homology_rank(1))
             H1_hlist.append(SC.compute_homology_rank(2))
             H2_hlist.append(SC.compute_homology_rank(3))
-
+            H3_hlist.append(SC.compute_homology_rank(4))
+            
             H0.append(SC.compute_homology_rank(1))
             H1.append(SC.compute_homology_rank(2))
             H2.append(SC.compute_homology_rank(3))
+            H3.append(SC.compute_homology_rank(4))
             
             iota.append(SC.compute_cyclomatic_complexity())
 
@@ -202,25 +282,26 @@ if __name__ == "__main__":
             print("Rank H0: " + str(SC.compute_homology_rank(1)))
             print("Rank H1: " + str(SC.compute_homology_rank(2)))
             print("Rank H2: " + str(SC.compute_homology_rank(3)))
+            print("Rank H3: " + str(SC.compute_homology_rank(4)))
             print("Cyclomatic Complexity: " + str(SC.compute_cyclomatic_complexity()))
+            print("Euler Characteristic: " + str(SC.compute_euler_characteristic()))
             print("--------------- S T A T S ---------------")
 
-        obf = 0
         # try graphing the persistent homologies!
-
         plt.plot(distances, distances, color='r')
         plt.scatter(H0, distances, color='r')
         plt.scatter(H1, distances, color='g')
         plt.scatter(H2, distances,  color='k')
+        plt.scatter(H3, distances, color='b')
         plt.xlabel('Birth')
         plt.ylabel('Death')
-        labels = ['distances', 'H_0', 'H_1', 'H_2']
+        labels = ['distances', 'H_0', 'H_1', 'H_2', 'H_3']
         plt.legend(labels)
         plt.show()
     
        
     # write these out to a dataframe
-    df = pd.DataFrame({'H0': H0_hlist, 'H1': H1_hlist, 'H2': H2_hlist, 'iota': iota, 'obf' : is_obf })
+    df = pd.DataFrame({'H0': H0_hlist, 'H1': H1_hlist, 'H2': H2_hlist, 'H3': H3_hlist, 'iota': iota, 'obf' : is_obf })
     print(df)
 
     #df_train, df_test = model_selection.train_test_split(df, test_size=0.3)
@@ -229,10 +310,6 @@ if __name__ == "__main__":
     model = ensemble.RandomForestClassifier(n_estimators=100, criterion="entropy", random_state=0)
     model.fit(X,y)
 
-    '''
-    Now compute the homologies of another binary...see what it thinks.
-    Not insanely optimistic at the moment lol
-    '''
     
     blob = angr.Project('../binaries/bin/obfuscated/testobf', load_options={'auto_load_libs':False})
     cfg = blob.analyses.CFGEmulated(keep_state=True)
@@ -249,10 +326,10 @@ if __name__ == "__main__":
     for i in range(1,10):
         print("DISTANCE = " + str(i))
         
-        l = filter_cfg(cfg,i)    
-        A = build_simplex(l)
+        paths = filter_cfg(cfg,i)    
+        Cp = build_simplex(paths)
         distances.append(i)
-        Cp = [check_faces(cfg, A[0], A[indx], indx+1) for indx in range(0,len(A))]
+        
         #N = graph_from_simplex(Cp[1])
         #nx.draw(N)
         #plt.show()
@@ -273,6 +350,7 @@ if __name__ == "__main__":
         print("Rank H0: " + str(SC.compute_homology_rank(1)))
         print("Rank H1: " + str(SC.compute_homology_rank(2)))
         print("Rank H2: " + str(SC.compute_homology_rank(3)))
+        print("Rank H3: " + str(SC.compute_homology_rank(4)))
         print("Cyclomatic Complexity: " + str(SC.compute_cyclomatic_complexity()))
         print("--------------- S T A T S ---------------")
             
@@ -282,4 +360,3 @@ if __name__ == "__main__":
     pred = model.predict(df)
     print(pred)
 
-    
