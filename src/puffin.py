@@ -25,12 +25,54 @@ def powerset(iterable):
     s = list(iterable)
     return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
 
+def filter_cfg_new(cfg, k):
+    '''
+    Use the directed distance metric as defined by Chartand to identify paths within a distance 
+    of k. The lengths of these paths correspond to n-simplices within a path complex.
+    '''
+    G = cfg.graph
+    l = []
+
+    # use the most central node as our starting point
+    central = []
+    V = nx.degree_centrality(G)
+    for item in V:
+        n = V[item]
+        central.append((n, item))
+    central.sort(key=itemgetter(0), reverse=True)
+    seed = central[0][1]
+
+    for v in G.nodes:
+        A = nx.all_simple_paths(G, seed, v, cutoff=k)
+        B = nx.all_simple_paths(G, v, seed, cutoff=k)
+        
+        # lengths of all the possible paths between nodes
+        d1 = [(path, len(path)) for path in A]
+        d2 = [(path, len(path)) for path in B]
+       
+        # sort the distances and paths by longest first
+        d1.sort(key = itemgetter(1), reverse=True)
+        d2.sort(key = itemgetter(1), reverse=True)
+
+        if (d1 == [] and d2 == []):
+            l.append([])
+        elif (d1 == [] and d2 != []):
+            l.append(d2[0][0])
+        elif (d2 == [] and d1 != []):
+            l.append(d1[0][0])
+        else:
+            # get the longest path and stuff that into a simplex.
+            if (d1[0][1] > d2[0][1]):
+                l.append(d1[0][0])
+            elif (d2[0][1] > d1[0][1]):
+                l.append(d2[0][0])
+            else:
+                l.append(d1[0][0])
+    return l
+'''
+
 def filter_cfg(cfg, k, metric="distance"):
-    '''
-    Filtration of binary data using a distance metric over the graph representation of the CFG, using seed data chosen based on vertex importance.
-    We can interpret this data as either the abstract simplicial complex over an undirected graph, 
-    or we can build a path complex from the CFG digraph. 
-    '''
+   
     # compute G
     G = cfg.graph
     l = []
@@ -43,12 +85,12 @@ def filter_cfg(cfg, k, metric="distance"):
     seed = central[0][1]
 
     # starting with the seed node, compute all nodes within distance k of seed.
-    ans = list(nx.bfs_edges(G, source=seed, depth_limit=k))
+    ans = list(nx.dfs_edges(G, source=seed, depth_limit=k))
     for path in ans:
         l.append(path)
     
     return l
-
+'''
 def check_faces(cfg, d1, simplices, dimension, undirected=True):
     '''
     Ensure that an edge exists in the o.g. graph if it's in the set of simplices
@@ -67,14 +109,14 @@ def check_faces(cfg, d1, simplices, dimension, undirected=True):
                 if G.has_edge(s[1], s[2]):
                     M.append(s)
     return M
-def build_simplex(l):
+def build_simplex(paths):
     '''
     Returns 1, 2, and 3-simplices from the filtered CFG data.
     '''
     # 1-simplices
     E = []
-    for i in l:
-        for v in i:
+    for path in paths:
+        for v in path:
             E.append(v)
 
     E = list(set(E))
@@ -84,15 +126,19 @@ def build_simplex(l):
     
     # 2-simplices
     d2 = []
-    for s in ordered_powerset(E):
-        if len(s) == 2:
-            d2.append(s)
-    # 3-simplices
+    for path in paths:
+        for i in range(0, len(path)-1):
+            j = i+1
+            t = (path[i], path[j])
+            d2.append(t)
     d3 = []
-    for s in ordered_powerset(E):
-        if len(s) == 3:
-            d3.append(s)
-    # ensure we get rid of duplicates
+    for path in paths:
+        for i in range(0, len(path)-2):
+            j = i+1
+            k = j+1
+            t = (path[i], path[j], path[k])
+            d3.append(t)
+
     return [d1,list(set(d2)),list(set(d3))]
 
 # build a networkx graph from the 2d edges in a simplex.
@@ -104,7 +150,7 @@ def graph_from_simplex(l):
 
 if __name__ == "__main__":
 
-    filename_list = ['../binaries/bin/obfuscated/helloobf', '../binaries/bin/orig/hello', '../binaries/bin/obfuscated/t1obf', '../binaries/bin/orig/t1', '../binaries/bin/obfuscated/t2obf', '../binaries/bin/orig/t2', '../binaries/bin/obfuscated/t3obf', '../binaries/bin/orig/t3', '../binaries/bin/obfuscated/t4obf', '../binaries/bin/orig/t4', '../binaries/bin/obfuscated/t5obf', '../binaries/bin/orig/t5']
+    filename_list = ['../binaries/bin/obfuscated/helloobf', '../binaries/bin/orig/hello', '../binaries/bin/obfuscated/t1obf', '../binaries/bin/orig/t1', '../binaries/bin/obfuscated/t3obf', '../binaries/bin/orig/t3', '../binaries/bin/obfuscated/t4obf', '../binaries/bin/orig/t4', '../binaries/bin/obfuscated/t5obf', '../binaries/bin/orig/t5']
     # first, build the angr CFG 
     obf = 1
     H0_hlist = []
@@ -122,11 +168,15 @@ if __name__ == "__main__":
 
         # now get all nodes within distance k
         distances = []
+        H0 = []
+        H1 = []
+        H2 = []
         
         for i in range(1,6):
             print("DISTANCE = " + str(i))
             is_obf.append(obf)
-            l = filter_cfg(cfg,i)    
+            #l = filter_cfg(cfg,i)
+            l =filter_cfg_new(cfg, i)
             A = build_simplex(l)
             distances.append(i)
             Cp = [check_faces(cfg, A[0], A[indx], indx+1) for indx in range(0,len(A))]
@@ -136,15 +186,17 @@ if __name__ == "__main__":
     
             # build the complex
             SC = SimplicialComplex(Cp)
-            H0 = SC.compute_homologies(1)
-            H1 = SC.compute_homologies(2)
-            H2 = SC.compute_homologies(3)
-        
+            
             H0_hlist.append(SC.compute_homology_rank(1))
             H1_hlist.append(SC.compute_homology_rank(2))
             H2_hlist.append(SC.compute_homology_rank(3))
 
+            H0.append(SC.compute_homology_rank(1))
+            H1.append(SC.compute_homology_rank(2))
+            H2.append(SC.compute_homology_rank(3))
+            
             iota.append(SC.compute_cyclomatic_complexity())
+
             print("--------------- S T A T S ---------------") 
             print("Dimension of SC: " + str(SC.dimension))
             print("Rank H0: " + str(SC.compute_homology_rank(1)))
@@ -156,16 +208,16 @@ if __name__ == "__main__":
         obf = 0
         # try graphing the persistent homologies!
 
-        '''
-        plt.scatter(distances, H0_hlist, color='r')
-        plt.scatter(distances, H1_hlist, color='g')
-        plt.scatter(distances, H2_hlist,  color='k')
-        plt.xlabel('Path Distance')
-        plt.ylabel('Ranks of H_0, H_1, and H_2')
-        labels = ['H_0', 'H_1', 'H_2']
+        plt.plot(distances, distances, color='r')
+        plt.scatter(H0, distances, color='r')
+        plt.scatter(H1, distances, color='g')
+        plt.scatter(H2, distances,  color='k')
+        plt.xlabel('Birth')
+        plt.ylabel('Death')
+        labels = ['distances', 'H_0', 'H_1', 'H_2']
         plt.legend(labels)
         plt.show()
-        '''
+    
        
     # write these out to a dataframe
     df = pd.DataFrame({'H0': H0_hlist, 'H1': H1_hlist, 'H2': H2_hlist, 'iota': iota, 'obf' : is_obf })
@@ -194,7 +246,7 @@ if __name__ == "__main__":
     # now get all nodes within distance k
     distances = []
         
-    for i in range(1,9):
+    for i in range(1,10):
         print("DISTANCE = " + str(i))
         
         l = filter_cfg(cfg,i)    
