@@ -66,7 +66,7 @@ class SimplicialComplex:
         for chain in self.Cp:
             for data in chain:
                 # get the dimension of the pchain
-                if not isinstance(data, int):
+                if not isinstance(data, int) or not isinstance(data, list):
                     dim = len(data)
                 else:
                     dim = 1
@@ -242,17 +242,27 @@ class SimplicialComplex:
         Bp = self.compute_boundary_rank(dimension+1)    
         return Zp - Bp
 
-    def compute_euler_characterisic(self):
+    def compute_euler_characteristic(self):
         '''
         Chi = Vertices - Edges + Faces
         '''
-        Chi = 0
         C0 = self.get_pchains(1)
         C1 = self.get_pchains(2)
         C2 = self.get_pchains(3)
-        
+        print(len(C0))
+        print(len(C1))
         Chi = len(C0) - len(C1) + len(C2)
         return Chi
+
+    def compute_cyclomatic_complexity(self):
+        '''
+        Iota = Edges - Vertices + 1
+        '''
+        C0 = self.get_pchains(1)
+        C1 = self.get_pchains(2)
+        Iota = len(C1) - len(C0) + 1
+        return Iota
+        
 def compute_boundary_with_matrix(M):
     '''
     Pass in a boundary matrix;  

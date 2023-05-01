@@ -25,17 +25,14 @@ def powerset(iterable):
     s = list(iterable)
     return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
 
-def filter_cfg(cfg, k, metric="distance", undirected=True):
+def filter_cfg(cfg, k, metric="distance"):
     '''
     Filtration of binary data using a distance metric over the graph representation of the CFG, using seed data chosen based on vertex importance.
     We can interpret this data as either the abstract simplicial complex over an undirected graph, 
     or we can build a path complex from the CFG digraph. 
     '''
     # compute G
-    if (undirected == True):
-        G = cfg.graph.to_undirected()
-    else:
-        G = cfg.graph
+    G = cfg.graph
     l = []
     central = []
     V = nx.degree_centrality(G)
@@ -56,28 +53,20 @@ def check_faces(cfg, d1, simplices, dimension, undirected=True):
     '''
     Ensure that an edge exists in the o.g. graph if it's in the set of simplices
     '''
-    if (undirected==True):
-        G = cfg.graph.to_undirected()
-    else:
-        G = cfg.graph
+    G = cfg.graph
     M = []
     if (dimension < 2):
         return simplices
     if (dimension == 2):
         for s in simplices:
-            if G.has_edge(s[0],s[1]) and [s[0]] in d1 and [s[1]] in d1:
+            if G.has_edge(s[0],s[1]):
                 M.append(s)
-        return M
     elif (dimension == 3):
         for s in simplices:
-            if G.has_edge(s[0], s[1]) and [s[0]] in d1 and [s[1]] in d1:
-                if G.has_edge(s[1], s[2]) and [s[2]] in d1:
-                    if (undirected == True):
-                        if (G.has_edge(s[2], s[0])):
-                            M.append(s)
-                    else:
-                        M.append(s)
-        return M
+            if G.has_edge(s[0], s[1]):
+                if G.has_edge(s[1], s[2]):
+                    M.append(s)
+    return M
 def build_simplex(l):
     '''
     Returns 1, 2, and 3-simplices from the filtered CFG data.
@@ -95,12 +84,12 @@ def build_simplex(l):
     
     # 2-simplices
     d2 = []
-    for s in powerset(E):
+    for s in ordered_powerset(E):
         if len(s) == 2:
             d2.append(s)
     # 3-simplices
     d3 = []
-    for s in powerset(E):
+    for s in ordered_powerset(E):
         if len(s) == 3:
             d3.append(s)
     # ensure we get rid of duplicates
@@ -115,7 +104,7 @@ def graph_from_simplex(l):
 
 if __name__ == "__main__":
 
-    filename_list = ['../binaries/bin/obfuscated/helloobf', '../binaries/bin/orig/hello']
+    filename_list = ['../binaries/bin/obfuscated/helloobf', '../binaries/bin/orig/hello', '../binaries/bin/obfuscated/t1obf', '../binaries/bin/orig/t1', '../binaries/bin/obfuscated/t2obf', '../binaries/bin/orig/t2', '../binaries/bin/obfuscated/t3obf', '../binaries/bin/orig/t3', '../binaries/bin/obfuscated/t4obf', '../binaries/bin/orig/t4', '../binaries/bin/obfuscated/t5obf', '../binaries/bin/orig/t5']
     # first, build the angr CFG 
     obf = 1
     H0_hlist = []
@@ -128,19 +117,19 @@ if __name__ == "__main__":
         blob = angr.Project(filename, load_options={'auto_load_libs':False})
         cfg = blob.analyses.CFGEmulated(keep_state=True)
 
-        nx.draw(cfg.graph.to_undirected())
-        plt.show()
+        #nx.draw(cfg.graph)
+        #plt.show()
 
         # now get all nodes within distance k
         distances = []
         
-        for i in range(1,18):
+        for i in range(1,6):
             print("DISTANCE = " + str(i))
             is_obf.append(obf)
-            l = filter_cfg(cfg,i, undirected=True)    
+            l = filter_cfg(cfg,i)    
             A = build_simplex(l)
             distances.append(i)
-            Cp = [check_faces(cfg, A[0], A[indx], indx+1, undirected=True) for indx in range(0,len(A))]
+            Cp = [check_faces(cfg, A[0], A[indx], indx+1) for indx in range(0,len(A))]
             #N = graph_from_simplex(Cp[1])
             #nx.draw(N)
             #plt.show()
@@ -205,13 +194,13 @@ if __name__ == "__main__":
     # now get all nodes within distance k
     distances = []
         
-    for i in range(1,18):
+    for i in range(1,9):
         print("DISTANCE = " + str(i))
         
-        l = filter_cfg(cfg,i, undirected=True)    
+        l = filter_cfg(cfg,i)    
         A = build_simplex(l)
         distances.append(i)
-        Cp = [check_faces(cfg, A[0], A[indx], indx+1, undirected=True) for indx in range(0,len(A))]
+        Cp = [check_faces(cfg, A[0], A[indx], indx+1) for indx in range(0,len(A))]
         #N = graph_from_simplex(Cp[1])
         #nx.draw(N)
         #plt.show()
