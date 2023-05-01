@@ -98,8 +98,6 @@ def filter_cfg(cfg, k, metric="distance"):
     
     return l
 '''
-
-
 def check_faces(simplex):
     
     for face in range(1, len(simplex)-1):
@@ -113,7 +111,8 @@ def check_faces(simplex):
                 if subset != ():
                     if prev_face == 0:
                         subset = [subset[0]]
-                    if subset not in simplex[prev_face]:
+                    k = len(subset)
+                    if subset not in simplex[k-1]:
                         to_remove_face.append(simplex[face][n])
                         to_remove_next_face.append(simplex[next_face][m])
 
@@ -125,7 +124,6 @@ def check_faces(simplex):
                 simplex[next_face].remove(j)
                     
     return simplex
-
 
 def build_simplex(paths, cfg):
     '''
@@ -153,7 +151,7 @@ def build_simplex(paths, cfg):
                 j = i+1
                 if (G.has_edge(path[i], path[j])):
                     t = (path[i], path[j])
-                    if t in ordered_powerset(path):
+                    if t in powerset(path):
                         d1.append(t)
                         
     d1 = [t for t in (set(tuple(i) for i in d1))]
@@ -167,7 +165,7 @@ def build_simplex(paths, cfg):
                 k = j+1
                 if (G.has_edge(path[i], path[j])) and (G.has_edge(path[j], path[k])):
                     t = (path[i], path[j], path[k])
-                    if t in ordered_powerset(path):
+                    if t in powerset(path):
                         d2.append(t)
                     
     d2 = [t for t in (set(tuple(i) for i in d2))]
@@ -182,7 +180,7 @@ def build_simplex(paths, cfg):
                 l = k + 1
                 if (G.has_edge(path[i], path[j])) and (G.has_edge(path[j], path[k])) and (G.has_edge(path[k], path[l])):
                     t = (path[i], path[j], path[k], path[l])
-                    if t in ordered_powerset(path):
+                    if t in powerset(path):
                         d3.append(t)
     d3 = [t for t in (set(tuple(i) for i in d3))]
     return [d0, d1, d2, d3]
