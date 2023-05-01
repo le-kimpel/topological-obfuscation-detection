@@ -185,7 +185,7 @@ def build_simplex(paths, cfg):
                     if t in ordered_powerset(path):
                         d3.append(t)
     d3 = [t for t in (set(tuple(i) for i in d3))]
-    return [d0, d1, d2, []]
+    return [d0, d1, d2, d3]
 
 # build a networkx graph from the 2d edges in a simplex.
 def graph_from_simplex(l):
@@ -255,7 +255,10 @@ if __name__ == "__main__":
             paths = filter_cfg_new(cfg, i)
             Cp = build_simplex(paths, cfg)
             Cp = check_faces(Cp)
-           
+
+            n = graph_from_simplex(Cp[1])
+            nx.draw(n)
+            plt.show()
             distances.append(i)
 
             #N = graph_from_simplex(Cp[1])
