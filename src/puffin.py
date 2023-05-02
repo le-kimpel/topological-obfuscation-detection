@@ -176,7 +176,7 @@ if __name__ == "__main__":
     print(A.compute_euler_characteristic())
     '''
 
-    filename_list = ['../binaries/bin/obfuscated/helloobf', '../binaries/bin/orig/hello', '../binaries/bin/obfuscated/t1obf', '../binaries/bin/orig/t1', '../binaries/bin/obfuscated/t3obf', '../binaries/bin/orig/t3', '../binaries/bin/obfuscated/t4obf', '../binaries/bin/orig/t4', '../binaries/bin/obfuscated/t5obf', '../binaries/bin/orig/t5']
+    filename_list = ['../binaries/bin/obfuscated/helloobf', '../binaries/bin/orig/hello', '../binaries/bin/obfuscated/t1obf', '../binaries/bin/orig/t1', '../binaries/bin/obfuscated/t2obf', '../binaries/bin/orig/t2', '../binaries/bin/obfuscated/t3obf', '../binaries/bin/orig/t3', '../binaries/bin/obfuscated/t4obf', '../binaries/bin/orig/t4', '../binaries/bin/obfuscated/t5obf', '../binaries/bin/orig/t5']
     # first, build the angr CFG 
     H0_hlist = []
     H1_hlist = []
@@ -200,7 +200,7 @@ if __name__ == "__main__":
         H2 = []
         H3 = []
         
-        for i in range(1, 20):
+        for i in range(1, 40):
             print("DISTANCE = " + str(i))
             is_obf.append(obf)
             paths = filter_cfg_new(cfg, i)
@@ -246,20 +246,18 @@ if __name__ == "__main__":
         plt.ylabel('Death')
         labels = ['distances', 'H_0', 'H_1', 'H_2', 'H_3']
         plt.legend(labels)
-        plt.show()
+        #plt.show()
     
        
     # write these out to a dataframe
     df = pd.DataFrame({'H0': H0_hlist, 'H1': H1_hlist, 'H2': H2_hlist, 'H3': H3_hlist, 'iota': iota, 'obf' : is_obf })
     print(df)
-
-    #df_train, df_test = model_selection.train_test_split(df, test_size=0.3)
+    
     X = df.drop("obf", axis=1).values
     y = df["obf"]
     model = ensemble.RandomForestClassifier(n_estimators=100, criterion="entropy", random_state=0)
     model.fit(X,y)
 
-    
     blob = angr.Project('../binaries/bin/obfuscated/testobf', load_options={'auto_load_libs':False})
     cfg = blob.analyses.CFGEmulated(keep_state=True)
 
@@ -271,12 +269,16 @@ if __name__ == "__main__":
     
     # now get all nodes within distance k
     distances = []
-        
-    for i in range(1,10):
+
+    H0 = []
+    H1 = []
+    H2 = []
+    H3 = []
+    for i in range(1,40):
         print("DISTANCE = " + str(i))
         
-        paths = filter_cfg(cfg,i)    
-        Cp = build_simplex(paths)
+        paths = filter_cfg_new(cfg,i)    
+        Cp = build_simplex(paths, cfg)
         distances.append(i)
         
         #N = graph_from_simplex(Cp[1])
@@ -285,14 +287,13 @@ if __name__ == "__main__":
         
         # build the complex
         SC = SimplicialComplex(Cp)
-        H0 = SC.compute_homologies(1)
-        H1 = SC.compute_homologies(2)
-        H2 = SC.compute_homologies(3)
     
-        H0_hlist.append(SC.compute_homology_rank(1))
-        H1_hlist.append(SC.compute_homology_rank(2))
-        H2_hlist.append(SC.compute_homology_rank(3))
+        H0.append(SC.compute_homology_rank(1))
+        H1.append(SC.compute_homology_rank(2))
+        H2.append(SC.compute_homology_rank(3))
+        H3.append(SC.compute_homology_rank(4))
 
+        
         iota.append(SC.compute_cyclomatic_complexity())
         print("--------------- S T A T S ---------------") 
         print("Dimension of SC: " + str(SC.dimension))
@@ -305,7 +306,7 @@ if __name__ == "__main__":
             
        
     # write these out to a dataframe
-    df = pd.DataFrame({'H0': H0_hlist, 'H1': H1_hlist, 'H2': H2_hlist, 'iota': iota})
+    df = pd.DataFrame({'H0': H0, 'H1': H1, 'H2': H2, 'H3': H3, 'iota': iota})
     pred = model.predict(df)
     print(pred)
 
