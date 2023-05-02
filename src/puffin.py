@@ -56,7 +56,7 @@ def filter_cfg_new(cfg, k):
         # lengths of all the possible paths between nodes
         d1 = [(path, len(path)) for path in A]
         d2 = [(path, len(path)) for path in B]
-       
+
         # sort the distances and paths by longest first
         d1.sort(key = itemgetter(1), reverse=True)
         d2.sort(key = itemgetter(1), reverse=True)
@@ -76,54 +76,6 @@ def filter_cfg_new(cfg, k):
             else:
                 l.append(d1[0][0])
     return l
-'''
-
-def filter_cfg(cfg, k, metric="distance"):
-   
-    # compute G
-    G = cfg.graph
-    l = []
-    central = []
-    V = nx.degree_centrality(G)
-    for item in V:
-        n = V[item]
-        central.append((n, item))
-    central.sort(key=itemgetter(0), reverse=True)
-    seed = central[0][1]
-
-    # starting with the seed node, compute all nodes within distance k of seed.
-    ans = list(nx.dfs_edges(G, source=seed, depth_limit=k))
-    for path in ans:
-        l.append(path)
-    
-    return l
-'''
-def check_faces(simplex):
-    
-    for face in range(1, len(simplex)-1):
-        to_remove_face = []
-        to_remove_next_face = []
-        next_face = face + 1
-        prev_face = face - 1
-        for n in range(0, len(simplex[face])):
-            for m in range(0, len(simplex[next_face])):
-                subset = get_intersection(simplex[face][n], simplex[next_face][m])
-                if subset != ():
-                    if prev_face == 0:
-                        subset = [subset[0]]
-                    k = len(subset)
-                    if subset not in simplex[k-1]:
-                        to_remove_face.append(simplex[face][n])
-                        to_remove_next_face.append(simplex[next_face][m])
-
-        for i in to_remove_face:
-            if i in simplex[face]:
-                simplex[face].remove(i)
-        for j in to_remove_next_face:
-            if j in simplex[next_face]:
-                simplex[next_face].remove(j)
-                    
-    return simplex
 
 def build_simplex(paths, cfg):
     '''
@@ -193,8 +145,9 @@ def graph_from_simplex(l):
     return G
 
 if __name__ == "__main__":
+
     '''
-    Ci = [[0],[1],[2],[3],[4],[5],[6],[7],[8], [(0,1), (0,2), (0,3), (0,4), (0,5), (0,6), (0,7), (0,8), (1,2), (3,4), (3,5), (4,5), (6,7), (6,8), (7,8)], [(0,1,2), (0,3,4), (0,3,5), (0,4,5), (0,6,7), (0,6,8), (3,4,5), (6,7,8)]]
+    Ci = [[0],[1],[2],[3],[4],[5],[6],[7],[8], [(0,1), (0,2), (0,3), (0,4), (0,5), (0,6), (0,7), (0,8), (1,2), (3,4), (3,5), (4,5), (6,7), (6,8), (7,8)], [(0,1,2), (0,3,4), (0,3,5), (0,4,5), (0,6,7), (0,6,8), (3,4,5),(6,7,8)], [(0,6,7,8), (0,3,4,5)]]
     A = SimplicialComplex(Ci)
 
     rankH0 = A.compute_homology_rank(1)
@@ -221,8 +174,8 @@ if __name__ == "__main__":
     print("Rank H1: " + str(rankH1))
     print("Rank H2: " + str(rankH2))
     print(A.compute_euler_characteristic())
-    
-'''
+    '''
+
     filename_list = ['../binaries/bin/obfuscated/helloobf', '../binaries/bin/orig/hello', '../binaries/bin/obfuscated/t1obf', '../binaries/bin/orig/t1', '../binaries/bin/obfuscated/t3obf', '../binaries/bin/orig/t3', '../binaries/bin/obfuscated/t4obf', '../binaries/bin/orig/t4', '../binaries/bin/obfuscated/t5obf', '../binaries/bin/orig/t5']
     # first, build the angr CFG 
     H0_hlist = []
@@ -252,11 +205,6 @@ if __name__ == "__main__":
             is_obf.append(obf)
             paths = filter_cfg_new(cfg, i)
             Cp = build_simplex(paths, cfg)
-            Cp = check_faces(Cp)
-
-            n = graph_from_simplex(Cp[1])
-            nx.draw(n)
-            plt.show()
             distances.append(i)
 
             #N = graph_from_simplex(Cp[1])

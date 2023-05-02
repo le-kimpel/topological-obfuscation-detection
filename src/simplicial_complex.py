@@ -89,6 +89,7 @@ class SimplicialComplex:
         K = [chain.mdata.tolist() for chain in C_]
 
         if Cp == [] or C_ == []:
+            self.dimension -= 1
             return []
         
         # do some preliminary checks...
@@ -100,6 +101,13 @@ class SimplicialComplex:
                     if k[1].tolist() not in K:
                         if Cp[j] in self.pchains:
                             self.pchains.remove(Cp[j])
+
+        Cp = self.get_pchains(dimension)
+        C_ = self.get_pchains(dimension - 1)
+
+        if Cp == [] or C_ == []:
+            self.dimension -= 1
+            return []
         # build an m x n numpy matrix
         D = np.zeros((len(C_), len(Cp)))
         
@@ -112,7 +120,7 @@ class SimplicialComplex:
                     if C_[i].mdata.size == 1:
                         if C_[i].mdata in k[1]:
                             break
-                    if np.array_equal(C_[i].mdata,  k[1]):
+                    if C_[i].mdata.tolist() == k[1].tolist():
                         break
                     else:
                         n+=1
@@ -243,13 +251,9 @@ class SimplicialComplex:
        
         boundary_rank = self.compute_boundary_rank(dimension)
         M = Matrix(self.compute_boundary_matrix(dimension))
-
         if M == []:
             return 0
-        
         M_rref = np.array(M.rref()[0])
-        print("SHAPE: " + str(M_rref.shape[1]))
-        print("RANK: " + str(M.rank()))
         
         # get rid of zero-valued columns
         return M_rref.shape[1] - M.rank()
@@ -264,9 +268,6 @@ class SimplicialComplex:
        
         Zp = self.compute_cycle_rank(dimension)
         Bp = self.compute_boundary_rank(dimension+1)
-
-        print("Z" + str(dimension) + ":" + " " + str(Zp))
-        print("B" + str(dimension+1) + ":" + " " + str(Bp))
         
         return Zp - Bp
 
