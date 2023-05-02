@@ -56,8 +56,8 @@ def filter_cfg_new(cfg, k):
         # lengths of all the possible paths between nodes
         d1 = [(path, len(path)) for path in A]
         d2 = [(path, len(path)) for path in B]
-
-        # sort the distances and paths by longest first
+        
+        # sort the distances and paths
         d1.sort(key = itemgetter(1), reverse=True)
         d2.sort(key = itemgetter(1), reverse=True)
         
