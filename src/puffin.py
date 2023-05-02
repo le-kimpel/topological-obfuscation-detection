@@ -189,7 +189,8 @@ if __name__ == "__main__":
         
         blob = angr.Project(filename, load_options={'auto_load_libs':False})
         cfg = blob.analyses.CFGEmulated(keep_state=True)
-        if (filename[:-3] == "obf"):
+        print(filename[-3:])
+        if (filename[-3:] == "obf"):
             obf = 1
         else:
             obf = 0
@@ -200,7 +201,7 @@ if __name__ == "__main__":
         H2 = []
         H3 = []
         
-        for i in range(1, 40):
+        for i in range(1, 60):
             print("DISTANCE = " + str(i))
             is_obf.append(obf)
             paths = filter_cfg_new(cfg, i)
@@ -274,7 +275,7 @@ if __name__ == "__main__":
     H1 = []
     H2 = []
     H3 = []
-    for i in range(1,40):
+    for i in range(1,60):
         print("DISTANCE = " + str(i))
         
         paths = filter_cfg_new(cfg,i)    
