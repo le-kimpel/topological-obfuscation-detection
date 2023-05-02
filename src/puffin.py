@@ -9,7 +9,7 @@ from simplicial_complex import SimplicialComplex
 from itertools import chain, combinations, permutations
 import pandas as pd
 from operator import itemgetter
-
+from scipy.stats import pearsonr
 '''
 Main code for supporting topological binary analysis.
 TODO: 
@@ -24,6 +24,15 @@ def get_intersection(A, B):
     Gets the intersection of tuples
     '''
     return tuple(set(A) & set(B))
+
+def get_pval(df):
+    col = pd.DataFrame(columns=df.columns)
+    pval = col.transpose().join(col, how='outer')
+    for r in df.columns:
+        for c in df.columns:
+            tmp = df[df[r].notnull() & df[c].notnull()]
+            pvalues[r][c] = round(pearsonr(tmp[r], tmp[c])[1], 4)
+    return pvalues
 def ordered_powerset(iterable):
     s = list(iterable)
     return chain.from_iterable(permutations(s, r) for r in range(len(s)+1))
@@ -201,7 +210,7 @@ if __name__ == "__main__":
         H2 = []
         H3 = []
         
-        for i in range(1, 60):
+        for i in range(0, 40):
             print("DISTANCE = " + str(i))
             is_obf.append(obf)
             paths = filter_cfg_new(cfg, i)
@@ -253,13 +262,14 @@ if __name__ == "__main__":
     # write these out to a dataframe
     df = pd.DataFrame({'H0': H0_hlist, 'H1': H1_hlist, 'H2': H2_hlist, 'H3': H3_hlist, 'iota': iota, 'obf' : is_obf })
     print(df)
+
     
     X = df.drop("obf", axis=1).values
     y = df["obf"]
     model = ensemble.RandomForestClassifier(n_estimators=100, criterion="entropy", random_state=0)
     model.fit(X,y)
 
-    blob = angr.Project('../binaries/bin/obfuscated/testobf', load_options={'auto_load_libs':False})
+    blob = angr.Project('../binaries/bin/orig/test', load_options={'auto_load_libs':False})
     cfg = blob.analyses.CFGEmulated(keep_state=True)
 
     H0_hlist = []
@@ -275,7 +285,7 @@ if __name__ == "__main__":
     H1 = []
     H2 = []
     H3 = []
-    for i in range(1,60):
+    for i in range(0,40):
         print("DISTANCE = " + str(i))
         
         paths = filter_cfg_new(cfg,i)    
