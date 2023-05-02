@@ -25,7 +25,7 @@ class pchain:
         if (self.dimension > 1):
             for i in range(0,self.mdata.size):
                 arr = np.delete(self.mdata, i)
-                if (i is not self.mdata.size-1):
+                if (i !=  self.mdata.size-1):
                     if (i%2 == 0):
                         eqn += "(p)" + str(arr) + " + "
                         total.append((1, arr))
@@ -42,6 +42,7 @@ class pchain:
             return total, "Boundary of " + str(self.mdata) + ": " + eqn
         else:
             return total, "Boundary of " + str(self.mdata) + ": 0"
+        
 class SimplicialComplex:
     '''
     Python representation of a generic simplicial complex.
@@ -84,7 +85,21 @@ class SimplicialComplex:
             return []
         Cp = self.get_pchains(dimension)
         C_ = self.get_pchains(dimension - 1)
-    
+
+        K = [chain.mdata.tolist() for chain in C_]
+
+        if Cp == [] or C_ == []:
+            return []
+        
+        # do some preliminary checks...
+        for i in range(0, len(C_)):
+            for j in range(0, len(Cp)):
+                b,p = Cp[j].compute_boundary()
+                for k in b:
+                    # if an item in the computed boundary does not belong..get rid of it
+                    if k[1].tolist() not in K:
+                        if Cp[j] in self.pchains:
+                            self.pchains.remove(Cp[j])
         # build an m x n numpy matrix
         D = np.zeros((len(C_), len(Cp)))
         
@@ -92,11 +107,12 @@ class SimplicialComplex:
         for i in range(0, len(C_)):
             for j in range(0, len(Cp)): 
                 b,p = Cp[j].compute_boundary()
-                res = p.split(":")[1:]
-                index = res[0].find(str(C_[i].mdata))
                 n = 0
                 for k in b:
-                    if C_[i].mdata in k[1]:
+                    if C_[i].mdata.size == 1:
+                        if C_[i].mdata in k[1]:
+                            break
+                    if np.array_equal(C_[i].mdata,  k[1]):
                         break
                     else:
                         n+=1
@@ -106,6 +122,8 @@ class SimplicialComplex:
                     D[i][j] = 1
                 elif b[n][0] == -1:
                     D[i][j] = -1
+        if D == []:
+            self.dimension -=1
         return D
 
     def compute_cycles(self, dimension):
@@ -209,6 +227,8 @@ class SimplicialComplex:
         if dimension > self.dimension:
             return 0
         M = self.compute_boundary_matrix(dimension)
+        if M == []:
+            return 0
         rank = np.linalg.matrix_rank(M)
         return rank
 
@@ -223,6 +243,9 @@ class SimplicialComplex:
        
         boundary_rank = self.compute_boundary_rank(dimension)
         M = Matrix(self.compute_boundary_matrix(dimension))
+
+        if M == []:
+            return 0
         
         M_rref = np.array(M.rref()[0])
         print("SHAPE: " + str(M_rref.shape[1]))
@@ -238,6 +261,7 @@ class SimplicialComplex:
         E.g.:
         rank Hp = rank Zp - rank Bp. 
         '''
+       
         Zp = self.compute_cycle_rank(dimension)
         Bp = self.compute_boundary_rank(dimension+1)
 
