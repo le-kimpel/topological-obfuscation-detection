@@ -216,11 +216,7 @@ if __name__ == "__main__":
             paths = filter_cfg_new(cfg, i)
             Cp = build_simplex(paths, cfg)
             distances.append(i)
-
-            #N = graph_from_simplex(Cp[1])
-            #nx.draw(N)
-            #plt.show()
-    
+            
             # build the complex
             SC = SimplicialComplex(Cp)
 
@@ -248,15 +244,38 @@ if __name__ == "__main__":
 
         # try graphing the persistent homologies!
         plt.plot(distances, distances, color='r')
-        plt.scatter(H0, distances, color='r')
-        plt.scatter(H1, distances, color='g')
-        plt.scatter(H2, distances,  color='k')
-        plt.scatter(H3, distances, color='b')
+
+        labels = []
+        labels.append('distances')
+        # if the homologies are 0-vectors...get rid of them.
+        if (sum(np.array(H0)) != 0):
+            for n in range(0, len(H0)):
+                if (H0[n] == 0):
+                    H0[n] = np.nan
+            plt.scatter(H0, distances, color='r')
+            labels.append('H_0')
+        if (sum(np.array(H1)) != 0):
+            for n in range(0, len(H1)):
+                if (H1[n] == 0):
+                    H1[n] = np.nan
+            plt.scatter(H1, distances, color='g')
+            labels.append('H_1')
+        if (sum(np.array(H2)) != 0):
+            for n in range(0,len(H2)):
+                if (H2[n] == 0):
+                    H2[n] = np.nan
+            plt.scatter(H2, distances, color='k')
+            labels.append('H_2')
+        if (sum(np.array(H3)) != 0):
+            for n in range(0, len(H3)):
+                if (H3[n] == 0):
+                    H3[n] = np.nan
+            plt.scatter(H3, distances, color='b')
+            labels.append('H_3')
         plt.xlabel('Birth')
         plt.ylabel('Death')
-        labels = ['distances', 'H_0', 'H_1', 'H_2', 'H_3']
         plt.legend(labels)
-        #plt.show()
+        plt.show()
     
        
     # write these out to a dataframe
@@ -292,10 +311,6 @@ if __name__ == "__main__":
         Cp = build_simplex(paths, cfg)
         distances.append(i)
         
-        #N = graph_from_simplex(Cp[1])
-        #nx.draw(N)
-        #plt.show()
-        
         # build the complex
         SC = SimplicialComplex(Cp)
     
@@ -304,7 +319,6 @@ if __name__ == "__main__":
         H2.append(SC.compute_homology_rank(3))
         H3.append(SC.compute_homology_rank(4))
 
-        
         iota.append(SC.compute_cyclomatic_complexity())
         print("--------------- S T A T S ---------------") 
         print("Dimension of SC: " + str(SC.dimension))
